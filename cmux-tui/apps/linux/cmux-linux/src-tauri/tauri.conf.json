@@ -1,0 +1,55 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "cmux-linux",
+  "version": "0.1.0",
+  "identifier": "io.github.erkanrzgc.cmuxlinux",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "cmux-linux — unofficial Linux fork",
+        "label": "main",
+        "width": 1200,
+        "height": 780,
+        "minWidth": 760,
+        "minHeight": 500,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' ws://127.0.0.1:*; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "appimage"],
+    "category": "DeveloperTool",
+    "shortDescription": "Unofficial cmux desktop client for Debian and Kali",
+    "longDescription": "A GPL-licensed, unofficial Linux desktop fork of cmux using the upstream cmux-tui backend and cmux.protocol/2 API.",
+    "copyright": "Copyright cmux contributors and cmux-linux contributors",
+    "licenseFile": "../../../../../LICENSE",
+    "resources": ["../THIRD_PARTY_NOTICES.md"],
+    "externalBin": [
+      "binaries/cmux-tui",
+      "binaries/cmux-tui-hook"
+    ],
+    "icon": ["../../../../../Assets.xcassets/AppIcon.appiconset/512.png"],
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0",
+          "libayatana-appindicator3-1"
+        ],
+        "files": {
+          "/usr/bin/cmux-linux-cli": "../scripts/cmux-linux-cli"
+        }
+      }
+    }
+  }
+}
