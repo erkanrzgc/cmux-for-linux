@@ -21,6 +21,22 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 test -x "$sidecar"
+
+# The distributed x86-64 sidecar must run on the architecture baseline. Zig's
+# native CPU default can otherwise bake AVX instructions into Ghostty's color
+# setup before the terminal host publishes its first snapshot.
+palette_disassembly=$(objdump --no-show-raw-insn -d \
+  --disassemble=ghostty_color_palette_generate "$sidecar")
+if ! printf '%s\n' "$palette_disassembly" | grep -q '<ghostty_color_palette_generate>:'; then
+  echo "cmux-linux portability smoke: Ghostty palette symbol was not found" >&2
+  exit 1
+fi
+if printf '%s\n' "$palette_disassembly" | grep -Eq ':[[:space:]]+v[a-z0-9]+'; then
+  printf '%s\n' "$palette_disassembly" >&2
+  echo "cmux-linux portability smoke: Ghostty palette requires AVX on an x86-64 baseline package" >&2
+  exit 1
+fi
+
 mkdir -p "$smoke_root/home" "$smoke_root/state" "$smoke_root/runtime"
 chmod 0700 "$smoke_root/home" "$smoke_root/state" "$smoke_root/runtime"
 
