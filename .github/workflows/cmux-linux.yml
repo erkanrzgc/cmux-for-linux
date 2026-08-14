@@ -37,7 +37,6 @@ jobs:
     env:
       DEBIAN_FRONTEND: noninteractive
       APP_DIR: cmux-tui/apps/linux/cmux-linux
-      CARGO_BUILD_TARGET: x86_64-unknown-linux-gnu
       CMUX_TUI_BUILD_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Install Debian 12 build prerequisites
