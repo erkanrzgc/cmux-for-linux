@@ -70,4 +70,19 @@ node -e '
   }
 ' "$metadata"
 
+HOME="$smoke_root/home" \
+XDG_STATE_HOME="$smoke_root/state" \
+XDG_RUNTIME_DIR="$smoke_root/runtime" \
+cmux-linux-cli --session cmux-linux --json workspace create --name "Linux package smoke"
+workspace_list=$(HOME="$smoke_root/home" \
+  XDG_STATE_HOME="$smoke_root/state" \
+  XDG_RUNTIME_DIR="$smoke_root/runtime" \
+  cmux-linux-cli --session cmux-linux --json workspace list)
+WORKSPACE_LIST="$workspace_list" node -e '
+  const workspaces = JSON.parse(process.env.WORKSPACE_LIST);
+  if (!Array.isArray(workspaces) || workspaces.length !== 1) {
+    throw new Error(`expected one usable workspace, received ${JSON.stringify(workspaces)}`);
+  }
+'
+
 echo "cmux-linux package and GUI smoke passed"
