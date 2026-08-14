@@ -470,9 +470,13 @@ mod tests {
 
         assert_eq!(fs::read(&paths.token).unwrap(), b"second");
         assert_eq!(fs::metadata(&paths.token).unwrap().mode() & 0o777, 0o600);
-        assert!(fs::read_dir(&paths.runtime_directory)
-            .unwrap()
-            .all(|entry| !entry.unwrap().file_name().to_string_lossy().ends_with(".tmp")));
+        assert!(
+            fs::read_dir(&paths.runtime_directory).unwrap().all(|entry| !entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .ends_with(".tmp"))
+        );
 
         let _ = fs::remove_dir_all(paths.state_directory.parent().unwrap());
     }
@@ -488,7 +492,9 @@ mod tests {
         fs::create_dir(&destination).unwrap();
         symlink(&destination, &paths.state_directory).unwrap();
 
-        assert!(secure_directory(&paths.state_directory).unwrap_err().contains("private directory"));
+        assert!(
+            secure_directory(&paths.state_directory).unwrap_err().contains("private directory")
+        );
 
         let _ = fs::remove_dir_all(root);
     }

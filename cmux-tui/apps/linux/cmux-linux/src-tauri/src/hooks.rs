@@ -123,9 +123,6 @@ mod tests {
 
     #[test]
     fn managed_shutdown_targets_only_the_cmux_linux_session() {
-        assert_eq!(
-            stop_arguments(),
-            ["--json", "server", "stop", "--session", "cmux-linux"],
-        );
+        assert_eq!(stop_arguments(), ["--json", "server", "stop", "--session", "cmux-linux"],);
     }
 }
