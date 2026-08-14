@@ -38,6 +38,9 @@ jobs:
       DEBIAN_FRONTEND: noninteractive
       APP_DIR: cmux-tui/apps/linux/cmux-linux
       CMUX_TUI_BUILD_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      # Release artifacts must run on baseline x86-64 CPUs, not only the
+      # GitHub runner CPU that compiled Ghostty's Zig terminal library.
+      CMUX_GHOSTTY_VT_ZIG_CPU: baseline
     steps:
       - name: Install Debian 12 build prerequisites
         run: |
