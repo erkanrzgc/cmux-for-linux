@@ -65,8 +65,8 @@ node -e '
   const metadata = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
   if (metadata.session !== "cmux-linux") throw new Error(`unexpected session: ${metadata.session}`);
   if (metadata.protocol !== "cmux.protocol/2") throw new Error(`unexpected protocol: ${metadata.protocol}`);
-  if (!/^ws:\/\/127\.0\.0\.1:[1-9][0-9]*$/.test(metadata.wsUrl)) {
-    throw new Error(`backend is not loopback-only: ${metadata.wsUrl}`);
+  if (!/^ws:\/\/127\.0\.0\.1:[1-9][0-9]*$/.test(metadata.ws_url)) {
+    throw new Error(`backend is not loopback-only: ${metadata.ws_url}`);
   }
 ' "$metadata"
 
