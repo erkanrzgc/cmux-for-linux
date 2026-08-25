@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { selectCurrent, selectId } from "cmux-sdk/browser";
+import { selectCurrent, selectId, type PaneId } from "cmux-sdk/browser";
 import { stopSessionsAndExit, writeClipboard } from "./backend";
 import { HookSettings } from "./HookSettings";
 import { t } from "./i18n";
@@ -71,6 +71,13 @@ export default function App() {
     screen: activeScreen.id,
     pane: activePane.id,
   } : null, [activeWorkspace, activeScreen, activePane]);
+
+  const requestPaneClose = (pane: PaneId) => {
+    if (!ids || !activeScreen || activeScreen.panes.length <= 1) return;
+    if (window.confirm(t("closePaneConfirm"))) {
+      void run(() => connection.actions.closePane(ids.workspace, ids.screen, pane));
+    }
+  };
 
   if (connection.status === "starting" && !connection.snapshot) {
     return <main className="state-screen"><div className="spinner" /><p>{t("starting")}</p></main>;
@@ -174,11 +181,7 @@ export default function App() {
                       await writeClipboard(copy.text);
                     });
                   }} />
-                  <IconButton className="danger" disabled={activeScreen.panes.length <= 1} icon="close" label={t("closePane")} onClick={() => {
-                    if (window.confirm(t("closePaneConfirm"))) {
-                      void run(() => connection.actions.closePane(ids.workspace, ids.screen, ids.pane));
-                    }
-                  }} />
+                  <IconButton className="danger" disabled={activeScreen.panes.length <= 1} icon="close" label={t("closePane")} onClick={() => requestPaneClose(ids.pane)} />
                 </div>
               )}
             </header>
@@ -199,7 +202,10 @@ export default function App() {
                         >{tab.name || pane.terminal?.title || `#${index + 1}`}</button>
                       ))}
                     </div>
-                    <IconButton icon="add" label={t("newTab")} onClick={() => void run(() => connection.actions.newTab(activeWorkspace.id, activeScreen.id, pane.id))} />
+                    <div className="pane-header-actions" onPointerDown={(event) => event.stopPropagation()}>
+                      <IconButton icon="add" label={t("newTab")} onClick={() => void run(() => connection.actions.newTab(activeWorkspace.id, activeScreen.id, pane.id))} />
+                      <IconButton className="danger" disabled={activeScreen.panes.length <= 1} icon="close" label={t("closePane")} onClick={() => requestPaneClose(pane.id)} />
+                    </div>
                   </header>
                   {pane.activeTab?.contentKind === "browser" ? (
                     <div className="unsupported">{t("browserUnsupported")}</div>

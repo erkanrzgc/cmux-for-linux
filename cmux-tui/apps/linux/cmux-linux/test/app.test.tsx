@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App";
 
@@ -102,7 +102,9 @@ describe("cmux-linux desktop shell", () => {
     const paneActions = screen.getByRole("toolbar", { name: "Pane actions" });
     expect(paneActions).toHaveClass("pane-actions");
     expect(screen.getByRole("button", { name: "Split right" })).toHaveClass("icon-button");
-    expect(screen.getByRole("button", { name: "Close pane" })).toHaveClass("icon-button");
+    expect(within(paneActions).getByRole("button", { name: "Close pane" })).toHaveClass("icon-button");
+    expect(within(document.querySelector(".pane") as HTMLElement).getByRole("button", { name: "Close pane" }))
+      .toHaveClass("icon-button");
   });
 
   it("shows an explicit unsupported panel for browser surfaces", () => {

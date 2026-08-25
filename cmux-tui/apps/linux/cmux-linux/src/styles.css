@@ -107,7 +107,8 @@ button.danger { color: var(--danger); }
 .tab-list button:hover { color: #dfe5eb; }
 .tab-list button.active { color: #e8edf2; background: #151a20; }
 .tab-list button.active::after { position: absolute; right: 9px; bottom: 0; left: 9px; height: 2px; background: var(--accent); content: ""; }
-.pane > header > .icon-button { width: 31px; height: 31px; flex-basis: 31px; border-left: 1px solid var(--border-soft); border-radius: 0; }
+.pane-header-actions { display: flex; align-self: stretch; flex: 0 0 auto; }
+.pane > header > .pane-header-actions .icon-button { width: 31px; height: 31px; flex-basis: 31px; border-left: 1px solid var(--border-soft); border-radius: 0; }
 .terminal { position: relative; flex: 1; overflow: auto; background: var(--surface); font: 13px/18px "JetBrains Mono", "Cascadia Mono", "DejaVu Sans Mono", monospace; }
 .terminal-grid { position: relative; min-height: 100%; padding: 7px 9px; }
 .terminal-row { height: var(--cell-height); white-space: pre; }
