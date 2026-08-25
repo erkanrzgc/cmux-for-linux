@@ -95,6 +95,16 @@ describe("cmux-linux desktop shell", () => {
     }));
   });
 
+  it("presents Limux branding with compact pane actions", () => {
+    render(<App />);
+
+    expect(screen.getByRole("heading", { name: "Limux" })).toBeInTheDocument();
+    const paneActions = screen.getByRole("toolbar", { name: "Pane actions" });
+    expect(paneActions).toHaveClass("pane-actions");
+    expect(screen.getByRole("button", { name: "Split right" })).toHaveClass("icon-button");
+    expect(screen.getByRole("button", { name: "Close pane" })).toHaveClass("icon-button");
+  });
+
   it("shows an explicit unsupported panel for browser surfaces", () => {
     mocks.connection = connected("browser");
     render(<App />);
