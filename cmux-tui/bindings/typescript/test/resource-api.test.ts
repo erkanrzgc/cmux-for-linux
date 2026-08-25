@@ -1896,6 +1896,112 @@ test("browser frames expose the exact pointer token used by mouse and wheel", as
   client.close();
 });
 
+test("terminal attachments accept graphics and history epochs from render streams", async () => {
+  let openedStream = "";
+  const transport = new FakeTransport((request, current) => {
+    if (request.operation === "terminal.attach") {
+      openedStream = (request.params as Envelope).stream_id as string;
+      current.ok(request, {
+        stream_id: openedStream,
+        attachment_lease: "terminal-lease",
+      });
+      return;
+    }
+    assert.fail(`unexpected operation ${String(request.operation)}`);
+  });
+  const client = new Client({
+    transport,
+    randomHex128: () => HEX_C,
+  });
+  const stream = await client.session(SESSION).terminal(TERMINAL).attach();
+
+  transport.emit({
+    protocol: "cmux.protocol/2",
+    type: "stream_item",
+    stream_id: openedStream,
+    sequence: "1",
+    item: {
+      kind: "snapshot",
+      terminal_id: TERMINAL,
+      render: {
+        size: { cols: 5, rows: 1 },
+        cursor: {
+          x: 5,
+          y: 0,
+          style: "block",
+          blink: false,
+          visible: true,
+          color: null,
+        },
+        default_fg: "#eeeeee",
+        default_bg: "#111111",
+        scrollback_rows: 0,
+        history_epoch: 7,
+        rows: [{
+          row: 0,
+          runs: [{ text: "hello", fg: null, bg: null, attrs: 0 }],
+        }],
+        graphics: { generation: 3, images: [], placements: [] },
+      },
+    },
+  });
+  const snapshot = await stream.next();
+  assert.equal(snapshot.value?.value.kind, "snapshot");
+  if (snapshot.value?.value.kind !== "snapshot") {
+    assert.fail("expected a terminal render snapshot");
+  }
+  const snapshotRender = snapshot.value.value.render as unknown as {
+    readonly historyEpoch: number;
+    readonly graphics: Readonly<Record<string, unknown>>;
+  };
+  assert.equal(snapshotRender.historyEpoch, 7);
+  assert.deepEqual(snapshotRender.graphics, {
+    generation: 3,
+    images: [],
+    placements: [],
+  });
+
+  transport.emit({
+    protocol: "cmux.protocol/2",
+    type: "stream_item",
+    stream_id: openedStream,
+    sequence: "2",
+    item: {
+      kind: "patch",
+      terminal_id: TERMINAL,
+      render: {
+        cursor: {
+          x: 5,
+          y: 0,
+          style: "block",
+          blink: false,
+          visible: true,
+          color: null,
+        },
+        full_reset: false,
+        history_epoch: 8,
+        rows: [],
+        graphics: { generation: 4, removed_image_ids: [9] },
+      },
+    },
+  });
+  const patch = await stream.next();
+  assert.equal(patch.value?.value.kind, "patch");
+  if (patch.value?.value.kind !== "patch") {
+    assert.fail("expected a terminal render patch");
+  }
+  const patchRender = patch.value.value.render as unknown as {
+    readonly historyEpoch: number;
+    readonly graphics: Readonly<Record<string, unknown>>;
+  };
+  assert.equal(patchRender.historyEpoch, 8);
+  assert.deepEqual(patchRender.graphics, {
+    generation: 4,
+    removed_image_ids: [9],
+  });
+  client.close();
+});
+
 test("browser frames reject a missing or non-string pointer token", async () => {
   const invalidFrames = [
     {
