@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 export type BackendState = "started" | "adopted" | "healthy";
 
@@ -33,3 +34,5 @@ export const notifyWhenUnfocused = (title: string, body: string): Promise<void> 
   invoke("notify_if_unfocused", { title, body });
 
 export const stopSessionsAndExit = (): Promise<void> => invoke("stop_sessions_and_exit");
+
+export const writeClipboard = (text: string): Promise<void> => writeText(text);

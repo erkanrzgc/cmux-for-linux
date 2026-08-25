@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({ listen: mocks.listen }));
-vi.mock("../src/backend", () => ({ stopSessionsAndExit: vi.fn() }));
+vi.mock("../src/backend", () => ({ stopSessionsAndExit: vi.fn(), writeClipboard: vi.fn() }));
 vi.mock("../src/ResourceTerminal", () => ({
   ResourceTerminal: () => <div>attached terminal</div>,
 }));

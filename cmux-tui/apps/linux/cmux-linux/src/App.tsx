@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { selectCurrent, selectId } from "cmux-sdk/browser";
-import { stopSessionsAndExit } from "./backend";
+import { stopSessionsAndExit, writeClipboard } from "./backend";
 import { HookSettings } from "./HookSettings";
 import { t } from "./i18n";
 import { ResourceTerminal } from "./ResourceTerminal";
@@ -25,14 +25,15 @@ function Icon({ name }: { readonly name: IconName }) {
 
 interface IconButtonProps {
   readonly className?: string;
+  readonly disabled?: boolean;
   readonly icon: IconName;
   readonly label: string;
   readonly onClick: () => void;
 }
 
-function IconButton({ className = "", icon, label, onClick }: IconButtonProps) {
+function IconButton({ className = "", disabled = false, icon, label, onClick }: IconButtonProps) {
   return (
-    <button className={`icon-button ${className}`.trim()} aria-label={label} title={label} onClick={onClick}>
+    <button className={`icon-button ${className}`.trim()} aria-label={label} disabled={disabled} title={label} onClick={onClick}>
       <Icon name={icon} />
     </button>
   );
@@ -170,10 +171,10 @@ export default function App() {
                     if (!terminal || !connection.client) return;
                     void run(async () => {
                       const copy = await connection.client!.session(selectCurrent()).terminal(selectId(terminal.id)).copy("screen");
-                      await navigator.clipboard.writeText(copy.text);
+                      await writeClipboard(copy.text);
                     });
                   }} />
-                  <IconButton className="danger" icon="close" label={t("closePane")} onClick={() => {
+                  <IconButton className="danger" disabled={activeScreen.panes.length <= 1} icon="close" label={t("closePane")} onClick={() => {
                     if (window.confirm(t("closePaneConfirm"))) {
                       void run(() => connection.actions.closePane(ids.workspace, ids.screen, ids.pane));
                     }

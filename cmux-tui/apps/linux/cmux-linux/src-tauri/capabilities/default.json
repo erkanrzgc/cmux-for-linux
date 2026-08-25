@@ -3,5 +3,5 @@
   "identifier": "main-capability",
   "description": "Minimal capability set for the cmux-linux application window",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "clipboard-manager:allow-write-text"]
 }

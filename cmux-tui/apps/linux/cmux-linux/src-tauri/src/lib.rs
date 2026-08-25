@@ -142,6 +142,7 @@ pub fn run() {
             show_main_window(app);
         }))
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         .manage(BackendManager::default())
         .setup(|app| {
