@@ -716,6 +716,8 @@ export interface RenderSnapshot {
   readonly defaultFg: string;
   readonly defaultBg: string;
   readonly scrollbackRows: number;
+  readonly historyEpoch?: number;
+  readonly graphics?: Document;
   readonly rows: readonly RenderRow[];
 }
 
@@ -726,6 +728,8 @@ export interface RenderPatch {
   readonly defaultFg?: string;
   readonly defaultBg?: string;
   readonly scrollbackRows?: number;
+  readonly historyEpoch?: number;
+  readonly graphics?: Document;
   readonly rows: readonly RenderRow[];
 }
 

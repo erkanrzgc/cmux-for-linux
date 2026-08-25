@@ -1950,10 +1950,7 @@ test("terminal attachments accept graphics and history epochs from render stream
   if (snapshot.value?.value.kind !== "snapshot") {
     assert.fail("expected a terminal render snapshot");
   }
-  const snapshotRender = snapshot.value.value.render as unknown as {
-    readonly historyEpoch: number;
-    readonly graphics: Readonly<Record<string, unknown>>;
-  };
+  const snapshotRender = snapshot.value.value.render;
   assert.equal(snapshotRender.historyEpoch, 7);
   assert.deepEqual(snapshotRender.graphics, {
     generation: 3,
@@ -1990,10 +1987,7 @@ test("terminal attachments accept graphics and history epochs from render stream
   if (patch.value?.value.kind !== "patch") {
     assert.fail("expected a terminal render patch");
   }
-  const patchRender = patch.value.value.render as unknown as {
-    readonly historyEpoch: number;
-    readonly graphics: Readonly<Record<string, unknown>>;
-  };
+  const patchRender = patch.value.value.render;
   assert.equal(patchRender.historyEpoch, 8);
   assert.deepEqual(patchRender.graphics, {
     generation: 4,
