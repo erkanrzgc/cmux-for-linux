@@ -1,6 +1,6 @@
 const messages = {
   en: {
-    unofficial: "Unofficial Linux fork",
+    unofficial: "cmux for Linux",
     starting: "Starting the local cmux backend…",
     reconnecting: "Connection lost. Reconnecting…",
     retry: "Retry",
@@ -18,6 +18,8 @@ const messages = {
     copyScreen: "Copy screen",
     settings: "Agent hooks",
     notifications: "Notifications",
+    paneActions: "Pane actions",
+    workspaceActions: "Workspace actions",
     latestUnread: "Go to latest unread",
     noWorkspace: "Create a workspace to begin.",
     noTerminal: "This pane has no terminal.",
@@ -41,7 +43,7 @@ const messages = {
     terminalInput: "Terminal input",
   },
   tr: {
-    unofficial: "Resmî olmayan Linux fork'u",
+    unofficial: "Linux için cmux",
     starting: "Yerel cmux backend'i başlatılıyor…",
     reconnecting: "Bağlantı kesildi. Yeniden bağlanılıyor…",
     retry: "Yeniden dene",
@@ -59,6 +61,8 @@ const messages = {
     copyScreen: "Ekranı kopyala",
     settings: "Ajan hook'ları",
     notifications: "Bildirimler",
+    paneActions: "Bölme eylemleri",
+    workspaceActions: "Çalışma alanı eylemleri",
     latestUnread: "Son okunmamışa git",
     noWorkspace: "Başlamak için bir çalışma alanı oluşturun.",
     noTerminal: "Bu bölmede terminal yok.",
@@ -82,7 +86,7 @@ const messages = {
     terminalInput: "Terminal girdisi",
   },
   ja: {
-    unofficial: "非公式 Linux フォーク",
+    unofficial: "Linux 向け cmux",
     starting: "ローカル cmux バックエンドを起動中…",
     reconnecting: "接続が切れました。再接続しています…",
     retry: "再試行",
@@ -100,6 +104,8 @@ const messages = {
     copyScreen: "画面をコピー",
     settings: "エージェントフック",
     notifications: "通知",
+    paneActions: "ペイン操作",
+    workspaceActions: "ワークスペース操作",
     latestUnread: "最新の未読通知へ移動",
     noWorkspace: "ワークスペースを作成してください。",
     noTerminal: "このペインにはターミナルがありません。",

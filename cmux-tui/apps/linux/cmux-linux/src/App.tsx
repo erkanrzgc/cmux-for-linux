@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { selectCurrent, selectId } from "cmux-sdk/browser";
 import { stopSessionsAndExit } from "./backend";
@@ -6,6 +6,37 @@ import { HookSettings } from "./HookSettings";
 import { t } from "./i18n";
 import { ResourceTerminal } from "./ResourceTerminal";
 import { useDesktopClient } from "./useDesktopClient";
+
+type IconName = "add" | "close" | "copy" | "rename" | "settings" | "splitDown" | "splitRight" | "zoom";
+
+function Icon({ name }: { readonly name: IconName }) {
+  const paths: Record<IconName, ReactNode> = {
+    add: <path d="M12 5v14M5 12h14" />,
+    close: <path d="m7 7 10 10M17 7 7 17" />,
+    copy: <><rect x="8" y="8" width="11" height="11" rx="2" /><path d="M16 8V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h1" /></>,
+    rename: <><path d="m4 20 4.3-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" /><path d="m14 7 3 3" /></>,
+    settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" /></>,
+    splitDown: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 12h18M12 15v4M10 17h4" /></>,
+    splitRight: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M12 3v18M15 12h4M17 10v4" /></>,
+    zoom: <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />,
+  };
+  return <svg aria-hidden="true" className="icon" viewBox="0 0 24 24">{paths[name]}</svg>;
+}
+
+interface IconButtonProps {
+  readonly className?: string;
+  readonly icon: IconName;
+  readonly label: string;
+  readonly onClick: () => void;
+}
+
+function IconButton({ className = "", icon, label, onClick }: IconButtonProps) {
+  return (
+    <button className={`icon-button ${className}`.trim()} aria-label={label} title={label} onClick={onClick}>
+      <Icon name={icon} />
+    </button>
+  );
+}
 
 export default function App() {
   const connection = useDesktopClient();
@@ -57,9 +88,9 @@ export default function App() {
   return (
     <main className="app-shell">
       <aside className="sidebar">
-        <header>
-          <div><strong>cmux-linux</strong><small>{t("unofficial")}</small></div>
-          <button aria-label={t("settings")} onClick={() => setSettings(true)}>⚙</button>
+        <header className="brand-row">
+          <div className="brand"><h1>Limux</h1><small>{t("unofficial")}</small></div>
+          <IconButton icon="settings" label={t("settings")} onClick={() => setSettings(true)} />
         </header>
         <h2>{t("workspaces")}</h2>
         <div className="workspace-list">
@@ -73,23 +104,23 @@ export default function App() {
             </button>
           ))}
         </div>
-        <button className="primary" onClick={() => {
-          const name = window.prompt(t("workspaceName"));
-          if (name !== null) void run(() => connection.actions.createWorkspace(name || undefined));
-        }}>＋ {t("newWorkspace")}</button>
-        {activeWorkspace && (
-          <div className="sidebar-actions">
-            <button onClick={() => {
+        <div className="sidebar-actions" role="toolbar" aria-label={t("workspaceActions")}>
+          <button className="new-workspace" onClick={() => {
+            const name = window.prompt(t("workspaceName"));
+            if (name !== null) void run(() => connection.actions.createWorkspace(name || undefined));
+          }}><Icon name="add" /><span>{t("newWorkspace")}</span></button>
+          {activeWorkspace && <>
+            <IconButton icon="rename" label={t("renameWorkspace")} onClick={() => {
               const name = window.prompt(t("renamePrompt"), activeWorkspace.name);
               if (name) void run(() => connection.actions.renameWorkspace(activeWorkspace.id, name));
-            }}>{t("renameWorkspace")}</button>
-            <button className="danger" onClick={() => {
+            }} />
+            <IconButton className="danger" icon="close" label={t("closeWorkspace")} onClick={() => {
               if (window.confirm(t("closeWorkspaceConfirm"))) {
                 void run(() => connection.actions.closeWorkspace(activeWorkspace.id));
               }
-            }}>{t("closeWorkspace")}</button>
-          </div>
-        )}
+            }} />
+          </>}
+        </div>
         <section className="notifications">
           <h2>{t("notifications")}<span className="badge">{unreadNotifications.length}</span></h2>
           {latestUnread && (
@@ -118,15 +149,38 @@ export default function App() {
         {message && <div className="banner error">{message}</div>}
         {activeWorkspace && activeScreen ? (
           <>
-            <nav className="screen-tabs">
-              {activeWorkspace.screens.map((screen, index) => (
-                <button
-                  className={screen.id === activeScreen.id ? "active" : ""}
-                  key={screen.id}
-                  onClick={() => void run(() => connection.actions.focusScreen(activeWorkspace.id, screen.id))}
-                >{screen.name || `#${index + 1}`}</button>
-              ))}
-            </nav>
+            <header className="workspace-toolbar">
+              <nav className="screen-tabs">
+                {activeWorkspace.screens.map((screen, index) => (
+                  <button
+                    className={screen.id === activeScreen.id ? "active" : ""}
+                    key={screen.id}
+                    onClick={() => void run(() => connection.actions.focusScreen(activeWorkspace.id, screen.id))}
+                  >{screen.name || `#${index + 1}`}</button>
+                ))}
+              </nav>
+              {ids && (
+                <div className="pane-actions" role="toolbar" aria-label={t("paneActions")}>
+                  <IconButton icon="add" label={t("newTab")} onClick={() => void run(() => connection.actions.newTab(ids.workspace, ids.screen, ids.pane))} />
+                  <IconButton icon="splitRight" label={t("splitRight")} onClick={() => void run(() => connection.actions.split(ids.workspace, ids.screen, ids.pane, "right"))} />
+                  <IconButton icon="splitDown" label={t("splitDown")} onClick={() => void run(() => connection.actions.split(ids.workspace, ids.screen, ids.pane, "down"))} />
+                  <IconButton icon="zoom" label={activePane?.zoomed ? t("restore") : t("zoom")} onClick={() => void run(() => connection.actions.zoomPane(ids.workspace, ids.screen, ids.pane, !activePane?.zoomed))} />
+                  <IconButton icon="copy" label={t("copyScreen")} onClick={() => {
+                    const terminal = activePane?.terminal;
+                    if (!terminal || !connection.client) return;
+                    void run(async () => {
+                      const copy = await connection.client!.session(selectCurrent()).terminal(selectId(terminal.id)).copy("screen");
+                      await navigator.clipboard.writeText(copy.text);
+                    });
+                  }} />
+                  <IconButton className="danger" icon="close" label={t("closePane")} onClick={() => {
+                    if (window.confirm(t("closePaneConfirm"))) {
+                      void run(() => connection.actions.closePane(ids.workspace, ids.screen, ids.pane));
+                    }
+                  }} />
+                </div>
+              )}
+            </header>
             <section className="pane-grid" style={{ gridTemplateColumns: `repeat(${Math.max(1, Math.ceil(Math.sqrt(activeScreen.panes.length)))}, minmax(0, 1fr))` }}>
               {activeScreen.panes.map((pane) => (
                 <article
@@ -144,7 +198,7 @@ export default function App() {
                         >{tab.name || pane.terminal?.title || `#${index + 1}`}</button>
                       ))}
                     </div>
-                    <button title={t("newTab")} onClick={() => void run(() => connection.actions.newTab(activeWorkspace.id, activeScreen.id, pane.id))}>＋</button>
+                    <IconButton icon="add" label={t("newTab")} onClick={() => void run(() => connection.actions.newTab(activeWorkspace.id, activeScreen.id, pane.id))} />
                   </header>
                   {pane.activeTab?.contentKind === "browser" ? (
                     <div className="unsupported">{t("browserUnsupported")}</div>
@@ -156,27 +210,6 @@ export default function App() {
                 </article>
               ))}
             </section>
-            {ids && (
-              <footer className="actionbar">
-                <button onClick={() => void run(() => connection.actions.newTab(ids.workspace, ids.screen, ids.pane))}>{t("newTab")}</button>
-                <button onClick={() => void run(() => connection.actions.split(ids.workspace, ids.screen, ids.pane, "right"))}>{t("splitRight")}</button>
-                <button onClick={() => void run(() => connection.actions.split(ids.workspace, ids.screen, ids.pane, "down"))}>{t("splitDown")}</button>
-                <button onClick={() => void run(() => connection.actions.zoomPane(ids.workspace, ids.screen, ids.pane, !activePane?.zoomed))}>{activePane?.zoomed ? t("restore") : t("zoom")}</button>
-                <button onClick={() => {
-                  const terminal = activePane?.terminal;
-                  if (!terminal || !connection.client) return;
-                  void run(async () => {
-                    const copy = await connection.client!.session(selectCurrent()).terminal(selectId(terminal.id)).copy("screen");
-                    await navigator.clipboard.writeText(copy.text);
-                  });
-                }}>{t("copyScreen")}</button>
-                <button className="danger" onClick={() => {
-                  if (window.confirm(t("closePaneConfirm"))) {
-                    void run(() => connection.actions.closePane(ids.workspace, ids.screen, ids.pane));
-                  }
-                }}>{t("closePane")}</button>
-              </footer>
-            )}
           </>
         ) : <div className="empty">{t("noWorkspace")}</div>}
       </section>

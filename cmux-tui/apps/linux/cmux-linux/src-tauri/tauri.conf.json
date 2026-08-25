@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "cmux-linux — unofficial Linux fork",
+        "title": "Limux — cmux for Linux",
         "label": "main",
         "width": 1200,
         "height": 780,

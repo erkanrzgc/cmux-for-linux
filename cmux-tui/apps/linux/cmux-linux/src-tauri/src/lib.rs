@@ -72,21 +72,21 @@ fn tray_labels() -> TrayLabels {
     let language = std::env::var("LANG").unwrap_or_default().to_lowercase();
     if language.starts_with("tr") {
         TrayLabels {
-            title: "cmux-linux — resmî olmayan Linux fork'u",
+            title: "Limux — Linux için cmux",
             open: "Aç",
             preserve: "Arayüzden çık — oturumları koru",
             stop: "Oturumları durdur ve çık…",
         }
     } else if language.starts_with("ja") {
         TrayLabels {
-            title: "cmux-linux — 非公式 Linux フォーク",
+            title: "Limux — Linux 向け cmux",
             open: "開く",
             preserve: "UI を終了 — セッションを維持",
             stop: "セッションを停止して終了…",
         }
     } else {
         TrayLabels {
-            title: "cmux-linux — unofficial Linux fork",
+            title: "Limux — cmux for Linux",
             open: "Open",
             preserve: "Exit UI — keep sessions",
             stop: "Stop sessions and exit…",
