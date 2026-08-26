@@ -2965,6 +2965,7 @@ export class Session extends Handle<SessionId, SessionSnapshot> {
       ...this.nestedScope(),
       initial_content: create.initialContent ?? "terminal",
       ...(create.name !== undefined ? { name: create.name } : {}),
+      ...(create.cwd !== undefined ? { cwd: create.cwd } : {}),
     };
     return this.client[createdOperation](operations.workspaceCreate, params, options);
   }

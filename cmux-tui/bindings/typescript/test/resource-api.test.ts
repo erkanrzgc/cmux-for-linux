@@ -652,6 +652,8 @@ test("created paths are strict runtime variants and fixed operations reject mism
     if (request.operation === "workspace.create") {
       if (params.initial_content === "empty") {
         assert.equal(params.expected_revision, "16");
+      } else {
+        assert.equal(params.cwd, "/tmp/project");
       }
       const value = params.initial_content === "empty"
         ? {
@@ -716,7 +718,7 @@ test("created paths are strict runtime variants and fixed operations reject mism
   assert.deepEqual(Object.keys(empty.value), ["kind", "workspace"]);
   assert.ok(Object.isFrozen(empty.value));
 
-  const terminal = await session.createWorkspace();
+  const terminal = await session.createWorkspace({ cwd: "/tmp/project" });
   assert.equal(terminal.value.kind, "terminal");
   if (terminal.value.kind !== "terminal") {
     assert.fail("expected terminal workspace path");

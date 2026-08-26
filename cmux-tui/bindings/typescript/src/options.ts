@@ -15,6 +15,7 @@ export type InitialContent = "terminal" | "empty";
 
 export interface CreateWorkspaceOptions {
   readonly name?: string;
+  readonly cwd?: string;
   readonly initialContent?: InitialContent;
 }
 
