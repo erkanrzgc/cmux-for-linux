@@ -37,9 +37,8 @@ pub struct AgentDetection {
 }
 
 fn is_executable(path: &Path) -> bool {
-    fs::metadata(path).is_ok_and(|metadata| {
-        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
-    })
+    fs::metadata(path)
+        .is_ok_and(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
 }
 
 fn executable_on_path(provider: AgentProvider, path: Option<&OsStr>) -> Option<PathBuf> {
@@ -50,21 +49,17 @@ fn executable_on_path(provider: AgentProvider, path: Option<&OsStr>) -> Option<P
 }
 
 fn detect_agents_from_path(path: Option<&OsStr>) -> Vec<AgentDetection> {
-    [
-        AgentProvider::Codex,
-        AgentProvider::Claude,
-        AgentProvider::Gemini,
-    ]
-    .into_iter()
-    .map(|provider| {
-        let executable = executable_on_path(provider, path);
-        AgentDetection {
-            provider,
-            detected: executable.is_some(),
-            path: executable.map(|value| value.to_string_lossy().into_owned()),
-        }
-    })
-    .collect()
+    [AgentProvider::Codex, AgentProvider::Claude, AgentProvider::Gemini]
+        .into_iter()
+        .map(|provider| {
+            let executable = executable_on_path(provider, path);
+            AgentDetection {
+                provider,
+                detected: executable.is_some(),
+                path: executable.map(|value| value.to_string_lossy().into_owned()),
+            }
+        })
+        .collect()
 }
 
 pub fn detect_agents() -> Vec<AgentDetection> {
@@ -96,27 +91,16 @@ mod tests {
 
     #[test]
     fn agent_detection_requires_an_executable_on_path() {
-        let nonce = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let directory = std::env::temp_dir().join(format!(
-            "limux-agent-detection-{}-{nonce}",
-            std::process::id()
-        ));
+        let nonce = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let directory = std::env::temp_dir()
+            .join(format!("limux-agent-detection-{}-{nonce}", std::process::id()));
         fs::create_dir(&directory).unwrap();
 
         let codex = directory.join("codex");
-        fs::File::create(&codex)
-            .unwrap()
-            .write_all(b"#!/bin/sh\n")
-            .unwrap();
+        fs::File::create(&codex).unwrap().write_all(b"#!/bin/sh\n").unwrap();
         fs::set_permissions(&codex, fs::Permissions::from_mode(0o755)).unwrap();
         let claude = directory.join("claude");
-        fs::File::create(&claude)
-            .unwrap()
-            .write_all(b"not executable\n")
-            .unwrap();
+        fs::File::create(&claude).unwrap().write_all(b"not executable\n").unwrap();
         fs::set_permissions(&claude, fs::Permissions::from_mode(0o644)).unwrap();
 
         let detections = detect_agents_from_path(Some(directory.as_os_str()));
