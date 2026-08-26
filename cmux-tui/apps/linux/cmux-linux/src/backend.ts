@@ -11,12 +11,10 @@ export interface BackendConnection {
   readonly state: BackendState;
 }
 
-export interface HookResult {
+export interface AgentDetection {
   readonly provider: "codex" | "claude" | "gemini";
-  readonly action: "status" | "install" | "uninstall";
-  readonly success: boolean;
-  readonly stdout: string;
-  readonly stderr: string;
+  readonly detected: boolean;
+  readonly path: string | null;
 }
 
 export const ensureBackend = (): Promise<BackendConnection> =>
@@ -25,10 +23,7 @@ export const ensureBackend = (): Promise<BackendConnection> =>
 export const recoverBackend = (): Promise<BackendConnection> =>
   invoke("recover_backend");
 
-export const hookOperation = (
-  provider: HookResult["provider"],
-  action: HookResult["action"],
-): Promise<HookResult> => invoke("agent_hook", { provider, action });
+export const detectAgents = (): Promise<AgentDetection[]> => invoke("detect_agents");
 
 export const notifyWhenUnfocused = (title: string, body: string): Promise<void> =>
   invoke("notify_if_unfocused", { title, body });

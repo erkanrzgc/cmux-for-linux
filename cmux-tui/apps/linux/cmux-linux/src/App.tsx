@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { selectCurrent, selectId, type PaneId } from "cmux-sdk/browser";
+import { selectCurrent, selectId, type PaneId, type TabId } from "cmux-sdk/browser";
 import { stopSessionsAndExit, writeClipboard } from "./backend";
 import { HookSettings } from "./HookSettings";
 import { t } from "./i18n";
@@ -29,11 +29,12 @@ interface IconButtonProps {
   readonly icon: IconName;
   readonly label: string;
   readonly onClick: () => void;
+  readonly onPointerDown?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
 }
 
-function IconButton({ className = "", disabled = false, icon, label, onClick }: IconButtonProps) {
+function IconButton({ className = "", disabled = false, icon, label, onClick, onPointerDown }: IconButtonProps) {
   return (
-    <button className={`icon-button ${className}`.trim()} aria-label={label} disabled={disabled} title={label} onClick={onClick}>
+    <button className={`icon-button ${className}`.trim()} aria-label={label} disabled={disabled} title={label} onClick={onClick} onPointerDown={onPointerDown}>
       <Icon name={icon} />
     </button>
   );
@@ -42,7 +43,7 @@ function IconButton({ className = "", disabled = false, icon, label, onClick }: 
 export default function App() {
   const connection = useDesktopClient();
   const [settings, setSettings] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ readonly tone: "error" | "success"; readonly text: string } | null>(null);
   const activeWorkspace = connection.tree.find((workspace) => workspace.focused) ?? connection.tree[0];
   const activeScreen = activeWorkspace?.screens.find((screen) => screen.focused) ?? activeWorkspace?.screens[0];
   const activePane = activeScreen?.panes.find((pane) => pane.focused) ?? activeScreen?.panes[0];
@@ -62,7 +63,7 @@ export default function App() {
       setMessage(null);
       await operation();
     } catch (reason) {
-      setMessage(t("commandFailed", { error: reason instanceof Error ? reason.message : String(reason) }));
+      setMessage({ tone: "error", text: t("commandFailed", { error: reason instanceof Error ? reason.message : String(reason) }) });
     }
   };
 
@@ -78,6 +79,15 @@ export default function App() {
       void run(() => connection.actions.closePane(ids.workspace, ids.screen, pane));
     }
   };
+
+  const requestTabClose = (pane: PaneId, tab: TabId, tabCount: number) => {
+    if (!ids || tabCount <= 1) return;
+    if (window.confirm(t("closeTabConfirm"))) {
+      void run(() => connection.actions.closeTab(ids.workspace, ids.screen, pane, tab));
+    }
+  };
+
+  const visiblePanes = activePane?.zoomed ? [activePane] : activeScreen?.panes ?? [];
 
   if (connection.status === "starting" && !connection.snapshot) {
     return <main className="state-screen"><div className="spinner" /><p>{t("starting")}</p></main>;
@@ -154,7 +164,7 @@ export default function App() {
             </span>
           </div>
         )}
-        {message && <div className="banner error">{message}</div>}
+        {message && <div className={`banner ${message.tone}`}>{message.text}</div>}
         {activeWorkspace && activeScreen ? (
           <>
             <header className="workspace-toolbar">
@@ -172,21 +182,22 @@ export default function App() {
                   <IconButton icon="add" label={t("newTab")} onClick={() => void run(() => connection.actions.newTab(ids.workspace, ids.screen, ids.pane))} />
                   <IconButton icon="splitRight" label={t("splitRight")} onClick={() => void run(() => connection.actions.split(ids.workspace, ids.screen, ids.pane, "right"))} />
                   <IconButton icon="splitDown" label={t("splitDown")} onClick={() => void run(() => connection.actions.split(ids.workspace, ids.screen, ids.pane, "down"))} />
-                  <IconButton icon="zoom" label={activePane?.zoomed ? t("restore") : t("zoom")} onClick={() => void run(() => connection.actions.zoomPane(ids.workspace, ids.screen, ids.pane, !activePane?.zoomed))} />
+                  <IconButton disabled={activeScreen.panes.length <= 1} icon="zoom" label={activePane?.zoomed ? t("restore") : t("zoom")} onClick={() => void run(() => connection.actions.zoomPane(ids.workspace, ids.screen, ids.pane, !activePane?.zoomed))} />
                   <IconButton icon="copy" label={t("copyScreen")} onClick={() => {
                     const terminal = activePane?.terminal;
                     if (!terminal || !connection.client) return;
                     void run(async () => {
                       const copy = await connection.client!.session(selectCurrent()).terminal(selectId(terminal.id)).copy("screen");
                       await writeClipboard(copy.text);
+                      setMessage({ tone: "success", text: t("screenCopied") });
                     });
                   }} />
                   <IconButton className="danger" disabled={activeScreen.panes.length <= 1} icon="close" label={t("closePane")} onClick={() => requestPaneClose(ids.pane)} />
                 </div>
               )}
             </header>
-            <section className="pane-grid" style={{ gridTemplateColumns: `repeat(${Math.max(1, Math.ceil(Math.sqrt(activeScreen.panes.length)))}, minmax(0, 1fr))` }}>
-              {activeScreen.panes.map((pane) => (
+            <section className="pane-grid" style={{ gridTemplateColumns: `repeat(${Math.max(1, Math.ceil(Math.sqrt(visiblePanes.length)))}, minmax(0, 1fr))` }}>
+              {visiblePanes.map((pane) => (
                 <article
                   className={`pane ${pane.id === activePane?.id ? "active" : ""}`}
                   key={pane.id}
@@ -195,16 +206,25 @@ export default function App() {
                   <header>
                     <div className="tab-list">
                       {pane.tabs.map((tab, index) => (
-                        <button
-                          className={tab.id === pane.activeTab?.id ? "active" : ""}
-                          key={tab.id}
-                          onClick={() => void run(() => connection.actions.focusTab(activeWorkspace.id, activeScreen.id, pane.id, tab.id))}
-                        >{tab.name || pane.terminal?.title || `#${index + 1}`}</button>
+                        <div className={`tab-item ${tab.id === pane.activeTab?.id ? "active" : ""}`} key={tab.id}>
+                          <button
+                            className="tab-select"
+                            onClick={() => void run(() => connection.actions.focusTab(activeWorkspace.id, activeScreen.id, pane.id, tab.id))}
+                          ><span>{tab.name || pane.terminal?.title || `#${index + 1}`}</span></button>
+                          {pane.tabs.length > 1 && (
+                            <IconButton
+                              className="danger tab-close"
+                              icon="close"
+                              label={t("closeTab")}
+                              onClick={() => requestTabClose(pane.id, tab.id, pane.tabs.length)}
+                              onPointerDown={(event) => event.stopPropagation()}
+                            />
+                          )}
+                        </div>
                       ))}
                     </div>
                     <div className="pane-header-actions" onPointerDown={(event) => event.stopPropagation()}>
                       <IconButton icon="add" label={t("newTab")} onClick={() => void run(() => connection.actions.newTab(activeWorkspace.id, activeScreen.id, pane.id))} />
-                      <IconButton className="danger" disabled={activeScreen.panes.length <= 1} icon="close" label={t("closePane")} onClick={() => requestPaneClose(pane.id)} />
                     </div>
                   </header>
                   {pane.activeTab?.contentKind === "browser" ? (

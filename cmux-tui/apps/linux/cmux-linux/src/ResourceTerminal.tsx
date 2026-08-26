@@ -33,8 +33,8 @@ function applyPatch(current: RenderSnapshot | null, item: TerminalAttachItem): R
 function cursorStyle(cursor: RenderCursor | undefined): CSSProperties | undefined {
   if (!cursor?.visible) return undefined;
   return {
-    left: `calc(${cursor.x} * var(--cell-width))`,
-    top: `calc(${cursor.y} * var(--cell-height))`,
+    left: `calc(var(--terminal-grid-padding-x) + ${cursor.x} * var(--cell-width))`,
+    top: `calc(var(--terminal-grid-padding-y) + ${cursor.y} * var(--cell-height))`,
     background: cursor.color ?? "var(--accent)",
   };
 }

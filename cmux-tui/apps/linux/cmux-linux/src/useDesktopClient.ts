@@ -129,6 +129,8 @@ export function useDesktopClient() {
       mutate((client) => session(client).workspace(workspace).screen(screen).pane(pane).zoom(enabled)),
     closePane: (workspace: WorkspaceId, screen: ScreenId, pane: PaneId) => mutate((client) =>
       session(client).workspace(workspace).screen(screen).pane(pane).close()),
+    closeTab: (workspace: WorkspaceId, screen: ScreenId, pane: PaneId, tab: TabId) => mutate((client) =>
+      session(client).workspace(workspace).screen(screen).pane(pane).tab(tab).close()),
     jumpToNotification: (notification: NotificationSnapshot) => {
       if (!snapshot || !notification.terminalId) return Promise.resolve();
       const tab = snapshot.tabs.find((item) => item.contentId === notification.terminalId);

@@ -2,7 +2,7 @@ mod backend;
 mod hooks;
 
 use backend::{BackendConnection, BackendManager};
-use hooks::{HookAction, HookProvider, HookResult};
+use hooks::AgentDetection;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
@@ -25,12 +25,8 @@ async fn recover_backend(
 }
 
 #[tauri::command]
-async fn agent_hook(
-    app: AppHandle,
-    provider: HookProvider,
-    action: HookAction,
-) -> Result<HookResult, String> {
-    hooks::run(&app, provider, action).await
+fn detect_agents() -> Vec<AgentDetection> {
+    hooks::detect_agents()
 }
 
 #[tauri::command]
@@ -158,7 +154,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             ensure_backend,
             recover_backend,
-            agent_hook,
+            detect_agents,
             notify_if_unfocused,
             stop_sessions_and_exit,
         ])
