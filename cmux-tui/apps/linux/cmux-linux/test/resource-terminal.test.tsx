@@ -55,6 +55,9 @@ describe("ResourceTerminal", () => {
     render(<ResourceTerminal terminal={terminal} />);
 
     expect(await screen.findByText("hello")).toBeInTheDocument();
+    const cursor = document.querySelector<HTMLElement>(".terminal-cursor")!;
+    expect(cursor.style.left).toBe("calc(var(--terminal-grid-padding-x) + 5 * var(--cell-width))");
+    expect(cursor.style.top).toBe("calc(var(--terminal-grid-padding-y) + 0 * var(--cell-height))");
     const input = screen.getByLabelText("Terminal input");
 
     fireEvent.focus(input);

@@ -103,8 +103,6 @@ describe("cmux-linux desktop shell", () => {
     expect(paneActions).toHaveClass("pane-actions");
     expect(screen.getByRole("button", { name: "Split right" })).toHaveClass("icon-button");
     expect(within(paneActions).getByRole("button", { name: "Close pane" })).toHaveClass("icon-button");
-    expect(within(document.querySelector(".pane") as HTMLElement).getByRole("button", { name: "Close pane" }))
-      .toHaveClass("icon-button");
   });
 
   it("shows an explicit unsupported panel for browser surfaces", () => {

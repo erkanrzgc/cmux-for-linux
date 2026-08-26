@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App";
 
 const mocks = vi.hoisted(() => ({
+  closeTab: vi.fn().mockResolvedValue(undefined),
   closePane: vi.fn().mockResolvedValue(undefined),
   closeWorkspace: vi.fn().mockResolvedValue(undefined),
   copyScreen: vi.fn().mockResolvedValue({ text: "copied terminal screen" }),
@@ -12,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   focusTab: vi.fn().mockResolvedValue(undefined),
   focusWorkspace: vi.fn().mockResolvedValue(undefined),
   handlers: new Map<string, () => void | Promise<void>>(),
-  hookOperation: vi.fn(),
+  detectAgents: vi.fn(),
   jumpToNotification: vi.fn().mockResolvedValue(undefined),
   listen: vi.fn(),
   newTab: vi.fn().mockResolvedValue(undefined),
@@ -30,7 +31,7 @@ vi.mock("@tauri-apps/api/event", () => ({
   listen: mocks.listen,
 }));
 vi.mock("../src/backend", () => ({
-  hookOperation: mocks.hookOperation,
+  detectAgents: mocks.detectAgents,
   stopSessionsAndExit: mocks.stopSessionsAndExit,
   writeClipboard: mocks.writeClipboard,
 }));
@@ -104,6 +105,7 @@ function connected() {
     },
     actions: {
       closePane: mocks.closePane,
+      closeTab: mocks.closeTab,
       closeWorkspace: mocks.closeWorkspace,
       createWorkspace: mocks.createWorkspace,
       focusPane: mocks.focusPane,
@@ -129,13 +131,11 @@ describe("Limux desktop button drive", () => {
       mocks.handlers.set(event, handler);
       return vi.fn();
     });
-    mocks.hookOperation.mockImplementation(async (provider: string, action: string) => ({
-      provider,
-      action,
-      success: true,
-      stdout: `${provider}:${action}`,
-      stderr: "",
-    }));
+    mocks.detectAgents.mockResolvedValue([
+      { provider: "codex", detected: true, path: "/usr/bin/codex" },
+      { provider: "claude", detected: true, path: "/usr/bin/claude" },
+      { provider: "gemini", detected: false, path: null },
+    ]);
     mocks.connection = connected();
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
@@ -166,9 +166,8 @@ describe("Limux desktop button drive", () => {
     fireEvent.pointerDown(panes[1]!);
     fireEvent.click(within(panes[0]!).getByRole("button", { name: "New tab" }));
     fireEvent.click(within(panes[1]!).getByRole("button", { name: "New tab" }));
-    const paneClose = within(panes[1]!).getByRole("button", { name: "Close pane" });
-    fireEvent.pointerDown(paneClose);
-    fireEvent.click(paneClose);
+    const logsTab = within(panes[0]!).getByText("logs").closest(".tab-item")!;
+    fireEvent.click(within(logsTab as HTMLElement).getByRole("button", { name: "Close tab" }));
 
     const toolbar = screen.getByRole("toolbar", { name: "Pane actions" });
     fireEvent.click(within(toolbar).getByRole("button", { name: "New tab" }));
@@ -186,48 +185,62 @@ describe("Limux desktop button drive", () => {
     expect(mocks.focusPane).toHaveBeenCalledTimes(1);
     expect(mocks.newTab).toHaveBeenCalledWith("workspace:active", "screen:primary", "pane:primary");
     expect(mocks.newTab).toHaveBeenCalledWith("workspace:active", "screen:primary", "pane:secondary");
-    expect(mocks.closePane).toHaveBeenCalledWith("workspace:active", "screen:primary", "pane:secondary");
+    expect(mocks.closeTab).toHaveBeenCalledWith("workspace:active", "screen:primary", "pane:primary", "tab:primary:2");
     expect(mocks.split).toHaveBeenCalledWith("workspace:active", "screen:primary", "pane:primary", "right");
     expect(mocks.split).toHaveBeenCalledWith("workspace:active", "screen:primary", "pane:primary", "down");
     expect(mocks.zoomPane).toHaveBeenCalledWith("workspace:active", "screen:primary", "pane:primary", true);
     expect(mocks.closePane).toHaveBeenCalledWith("workspace:active", "screen:primary", "pane:primary");
-    expect(mocks.closePane).toHaveBeenCalledTimes(2);
+    expect(mocks.closePane).toHaveBeenCalledTimes(1);
     expect(mocks.jumpToNotification).toHaveBeenCalledTimes(2);
     await waitFor(() => expect(mocks.copyScreen).toHaveBeenCalledWith("screen"));
     await waitFor(() => expect(mocks.writeClipboard).toHaveBeenCalledWith("copied terminal screen"));
+    expect(await screen.findByText("Screen copied.")).toBeInTheDocument();
   });
 
-  it("does not offer an invalid close action for the final pane", () => {
+  it("closes a terminal tab while protecting the final pane", () => {
     const connection = connected();
     connection.tree[0]!.screens[0]!.panes = connection.tree[0]!.screens[0]!.panes.slice(0, 1);
     mocks.connection = connection;
     render(<App />);
 
-    const closeButtons = screen.getAllByRole("button", { name: "Close pane" });
-    expect(closeButtons).toHaveLength(2);
-    for (const button of closeButtons) {
-      expect(button).toBeDisabled();
-    }
+    expect(screen.getByRole("button", { name: "Close pane" })).toBeDisabled();
+    const logsTab = screen.getByText("logs").closest(".tab-item")!;
+    fireEvent.click(within(logsTab as HTMLElement).getByRole("button", { name: "Close tab" }));
+
+    expect(mocks.closeTab).toHaveBeenCalledWith(
+      "workspace:active", "screen:primary", "pane:primary", "tab:primary:2",
+    );
   });
 
-  it("drives every hook settings button for every provider", async () => {
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "Agent hooks" }));
-    const dialog = screen.getByRole("dialog", { name: "Agent hooks" });
-    await waitFor(() => expect(mocks.hookOperation).toHaveBeenCalledTimes(3));
-    mocks.hookOperation.mockClear();
+  it("renders only the active pane while zoomed and disables no-op single-pane zoom", () => {
+    const connection = connected();
+    connection.tree[0]!.screens[0]!.panes[0]!.zoomed = true;
+    mocks.connection = connection;
+    const view = render(<App />);
 
-    for (const provider of ["codex", "claude", "gemini"]) {
-      const article = within(dialog).getByText(provider).closest("article")!;
-      for (const action of ["Status", "Install", "Uninstall"]) {
-        await waitFor(() => expect(within(article).getByRole("button", { name: action })).toBeEnabled());
-        fireEvent.click(within(article).getByRole("button", { name: action }));
-        await waitFor(() => expect(mocks.hookOperation).toHaveBeenCalledWith(provider, action.toLowerCase()));
-      }
-    }
+    expect(view.container.querySelectorAll(".pane")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Restore" })).toBeEnabled();
+
+    connection.tree[0]!.screens[0]!.panes = connection.tree[0]!.screens[0]!.panes.slice(0, 1);
+    connection.tree[0]!.screens[0]!.panes[0]!.zoomed = false;
+    view.rerender(<App />);
+    expect(screen.getByRole("button", { name: "Zoom" })).toBeDisabled();
+  });
+
+  it("detects installed agents without offering hook mutations", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Detected agents" }));
+    const dialog = screen.getByRole("dialog", { name: "Detected agents" });
+    await waitFor(() => expect(mocks.detectAgents).toHaveBeenCalledOnce());
+
+    expect(within(dialog).getAllByText("Detected")).toHaveLength(2);
+    expect(within(dialog).getByText("Not detected")).toBeInTheDocument();
+    expect(within(dialog).getByText("/usr/bin/codex")).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Install" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Uninstall" })).not.toBeInTheDocument();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
-    expect(screen.queryByRole("dialog", { name: "Agent hooks" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Detected agents" })).not.toBeInTheDocument();
   });
 
   it("drives retry and recovery from the reconnect banner", () => {
