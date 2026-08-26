@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { selectCurrent, selectId, type PaneId, type TabId } from "cmux-sdk/browser";
+import { loadAppearance, saveAppearance, type AppearancePreferences } from "./appearance";
 import { stopSessionsAndExit, writeClipboard } from "./backend";
-import { HookSettings } from "./HookSettings";
 import { t } from "./i18n";
 import { ResourceTerminal } from "./ResourceTerminal";
+import { SettingsDialog } from "./SettingsDialog";
 import { useDesktopClient } from "./useDesktopClient";
+import { WorkspaceDialog } from "./WorkspaceDialog";
 
 type IconName = "add" | "close" | "copy" | "rename" | "settings" | "splitDown" | "splitRight" | "zoom";
 
@@ -43,6 +45,8 @@ function IconButton({ className = "", disabled = false, icon, label, onClick, on
 export default function App() {
   const connection = useDesktopClient();
   const [settings, setSettings] = useState(false);
+  const [workspaceDialog, setWorkspaceDialog] = useState(false);
+  const [appearance, setAppearance] = useState(loadAppearance);
   const [message, setMessage] = useState<{ readonly tone: "error" | "success"; readonly text: string } | null>(null);
   const activeWorkspace = connection.tree.find((workspace) => workspace.focused) ?? connection.tree[0];
   const activeScreen = activeWorkspace?.screens.find((screen) => screen.focused) ?? activeWorkspace?.screens[0];
@@ -88,6 +92,17 @@ export default function App() {
   };
 
   const visiblePanes = activePane?.zoomed ? [activePane] : activeScreen?.panes ?? [];
+  const terminalFontFamily = appearance.terminalFontFamily === "jetbrains"
+    ? '"JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia Mono", "DejaVu Sans Mono", monospace'
+    : 'ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace';
+  const appearanceStyle = {
+    "--terminal-font-family": terminalFontFamily,
+    "--terminal-font-weight": appearance.terminalFontWeight,
+  } as CSSProperties;
+  const updateAppearance = (next: AppearancePreferences) => {
+    setAppearance(next);
+    saveAppearance(next);
+  };
 
   if (connection.status === "starting" && !connection.snapshot) {
     return <main className="state-screen"><div className="spinner" /><p>{t("starting")}</p></main>;
@@ -104,7 +119,10 @@ export default function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main
+      className={`app-shell ${appearance.glassChrome ? "glass-chrome" : "solid-chrome"} ${appearance.animatedWaves ? "wave-motion" : ""}`}
+      style={appearanceStyle}
+    >
       <aside className="sidebar">
         <header className="brand-row">
           <div className="brand"><h1>Limux</h1><small>{t("unofficial")}</small></div>
@@ -123,10 +141,7 @@ export default function App() {
           ))}
         </div>
         <div className="sidebar-actions" role="toolbar" aria-label={t("workspaceActions")}>
-          <button className="new-workspace" onClick={() => {
-            const name = window.prompt(t("workspaceName"));
-            if (name !== null) void run(() => connection.actions.createWorkspace(name || undefined));
-          }}><Icon name="add" /><span>{t("newWorkspace")}</span></button>
+          <button className="new-workspace" onClick={() => setWorkspaceDialog(true)}><Icon name="add" /><span>{t("newWorkspace")}</span></button>
           {activeWorkspace && <>
             <IconButton icon="rename" label={t("renameWorkspace")} onClick={() => {
               const name = window.prompt(t("renamePrompt"), activeWorkspace.name);
@@ -240,7 +255,22 @@ export default function App() {
           </>
         ) : <div className="empty">{t("noWorkspace")}</div>}
       </section>
-      {settings && <HookSettings onClose={() => setSettings(false)} />}
+      {settings && (
+        <SettingsDialog
+          appearance={appearance}
+          onAppearanceChange={updateAppearance}
+          onClose={() => setSettings(false)}
+        />
+      )}
+      {workspaceDialog && (
+        <WorkspaceDialog
+          onClose={() => setWorkspaceDialog(false)}
+          onCreate={async (name, cwd) => {
+            await connection.actions.createWorkspace(name, cwd);
+            setWorkspaceDialog(false);
+          }}
+        />
+      )}
     </main>
   );
 }

@@ -105,8 +105,8 @@ export function useDesktopClient() {
 
   const session = useCallback((client: Client) => client.session(selectCurrent()), []);
   const actions = useMemo(() => ({
-    createWorkspace: (name?: string) => mutate((client) =>
-      session(client).createWorkspace({ name, initialContent: "terminal" })),
+    createWorkspace: (name?: string, cwd?: string) => mutate((client) =>
+      session(client).createWorkspace({ name, cwd, initialContent: "terminal" })),
     focusWorkspace: (id: WorkspaceId) => mutate((client) => session(client).workspace(id).focus()),
     renameWorkspace: (id: WorkspaceId, name: string) => mutate((client) =>
       session(client).workspace(id).rename(name)),

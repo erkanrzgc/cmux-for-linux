@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   jumpToNotification: vi.fn().mockResolvedValue(undefined),
   listen: vi.fn(),
   newTab: vi.fn().mockResolvedValue(undefined),
+  pickWorkspaceDirectory: vi.fn(),
   recover: vi.fn().mockResolvedValue(undefined),
   renameWorkspace: vi.fn().mockResolvedValue(undefined),
   retry: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock("@tauri-apps/api/event", () => ({
 }));
 vi.mock("../src/backend", () => ({
   detectAgents: mocks.detectAgents,
+  pickWorkspaceDirectory: mocks.pickWorkspaceDirectory,
   stopSessionsAndExit: mocks.stopSessionsAndExit,
   writeClipboard: mocks.writeClipboard,
 }));
@@ -136,23 +138,34 @@ describe("Limux desktop button drive", () => {
       { provider: "claude", detected: true, path: "/usr/bin/claude" },
       { provider: "gemini", detected: false, path: null },
     ]);
+    mocks.pickWorkspaceDirectory.mockResolvedValue("/home/test/projects/created-workspace");
+    window.localStorage.clear();
     mocks.connection = connected();
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
-  it("drives every workspace button through its shared action", () => {
-    vi.spyOn(window, "prompt")
-      .mockReturnValueOnce("created workspace")
-      .mockReturnValueOnce("renamed workspace");
+  it("creates a workspace in the selected directory and drives the remaining workspace actions", async () => {
+    vi.spyOn(window, "prompt").mockReturnValueOnce("renamed workspace");
     render(<App />);
 
     fireEvent.click(screen.getByRole("button", { name: /^idle/ }));
     fireEvent.click(screen.getByRole("button", { name: "New workspace" }));
+    const dialog = screen.getByRole("dialog", { name: "New workspace" });
+    fireEvent.change(within(dialog).getByLabelText("Workspace name"), { target: { value: "created workspace" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Choose folder…" }));
+    await waitFor(() => expect(mocks.pickWorkspaceDirectory).toHaveBeenCalledWith(
+      undefined,
+      "Choose or create a workspace folder",
+    ));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create workspace" }));
+    await waitFor(() => expect(mocks.createWorkspace).toHaveBeenCalledWith(
+      "created workspace",
+      "/home/test/projects/created-workspace",
+    ));
     fireEvent.click(screen.getByRole("button", { name: "Rename workspace" }));
     fireEvent.click(screen.getByRole("button", { name: "Close workspace" }));
 
     expect(mocks.focusWorkspace).toHaveBeenCalledWith("workspace:idle");
-    expect(mocks.createWorkspace).toHaveBeenCalledWith("created workspace");
     expect(mocks.renameWorkspace).toHaveBeenCalledWith("workspace:active", "renamed workspace");
     expect(mocks.closeWorkspace).toHaveBeenCalledWith("workspace:active");
   });
@@ -229,10 +242,12 @@ describe("Limux desktop button drive", () => {
 
   it("detects installed agents without offering hook mutations", async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "Detected agents" }));
-    const dialog = screen.getByRole("dialog", { name: "Detected agents" });
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const dialog = screen.getByRole("dialog", { name: "Settings" });
     await waitFor(() => expect(mocks.detectAgents).toHaveBeenCalledOnce());
 
+    expect(within(dialog).getByRole("heading", { name: "Appearance" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("combobox", { name: /Terminal font/ })).toHaveValue("jetbrains");
     expect(within(dialog).getAllByText("Detected")).toHaveLength(2);
     expect(within(dialog).getByText("Not detected")).toBeInTheDocument();
     expect(within(dialog).getByText("/usr/bin/codex")).toBeInTheDocument();
@@ -240,7 +255,24 @@ describe("Limux desktop button drive", () => {
     expect(within(dialog).queryByRole("button", { name: "Uninstall" })).not.toBeInTheDocument();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
-    expect(screen.queryByRole("dialog", { name: "Detected agents" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Settings" })).not.toBeInTheDocument();
+  });
+
+  it("previews and persists appearance settings", () => {
+    const view = render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const dialog = screen.getByRole("dialog", { name: "Settings" });
+
+    fireEvent.change(within(dialog).getByRole("combobox", { name: /Font weight/ }), { target: { value: "600" } });
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: /Glass chrome/ }));
+
+    const shell = view.container.querySelector<HTMLElement>(".app-shell")!;
+    expect(shell.style.getPropertyValue("--terminal-font-weight")).toBe("600");
+    expect(shell).toHaveClass("solid-chrome");
+    expect(JSON.parse(window.localStorage.getItem("limux.appearance.v1")!)).toMatchObject({
+      terminalFontWeight: 600,
+      glassChrome: false,
+    });
   });
 
   it("drives retry and recovery from the reconnect banner", () => {
