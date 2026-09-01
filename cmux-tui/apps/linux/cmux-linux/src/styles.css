@@ -65,26 +65,43 @@ button.danger { color: var(--danger); }
   grid-template-columns: 224px minmax(0, 1fr);
   height: 100%;
   background:
-    radial-gradient(circle at 10% 12%, rgba(38, 148, 255, .12), transparent 32%),
-    radial-gradient(circle at 90% 4%, rgba(111, 70, 255, .08), transparent 28%),
+    radial-gradient(circle at 8% 14%, rgba(65, 222, 137, .13), transparent 31%),
+    radial-gradient(circle at 91% 8%, rgba(74, 128, 255, .13), transparent 29%),
+    radial-gradient(circle at 48% 92%, rgba(148, 76, 255, .1), transparent 34%),
     var(--background);
 }
-.app-shell::before {
+.app-shell::before,
+.app-shell::after {
   position: absolute;
   z-index: -1;
-  inset: -35%;
+  inset: -38%;
   pointer-events: none;
-  background:
-    radial-gradient(circle at 25% 40%, rgba(31, 151, 255, .2), transparent 22%),
-    radial-gradient(circle at 68% 35%, rgba(121, 75, 255, .14), transparent 24%),
-    radial-gradient(circle at 55% 72%, rgba(38, 209, 180, .11), transparent 25%);
-  filter: blur(74px);
-  opacity: 0;
-  transform: translate3d(-4%, -2%, 0) scale(1.04);
   content: "";
+  opacity: 0;
+  will-change: transform;
 }
-.app-shell.glass-chrome::before { opacity: .72; }
-.app-shell.wave-motion::before { animation: limux-wave 20s ease-in-out infinite alternate; }
+.app-shell::before {
+  background:
+    radial-gradient(circle at 17% 24%, rgba(255, 67, 92, .27), transparent 18%),
+    radial-gradient(circle at 39% 72%, rgba(48, 226, 132, .24), transparent 21%),
+    radial-gradient(circle at 72% 25%, rgba(48, 126, 255, .28), transparent 20%),
+    radial-gradient(circle at 88% 76%, rgba(145, 67, 255, .25), transparent 20%);
+  filter: blur(82px) saturate(118%);
+  transform: translate3d(-5%, -3%, 0) scale(1.04);
+}
+.app-shell::after {
+  background:
+    radial-gradient(circle at 18% 77%, rgba(255, 207, 61, .2), transparent 17%),
+    radial-gradient(circle at 36% 58%, rgba(178, 255, 62, .2), transparent 18%),
+    radial-gradient(circle at 67% 67%, rgba(43, 223, 174, .16), transparent 19%),
+    radial-gradient(circle at 79% 38%, rgba(208, 65, 255, .17), transparent 18%);
+  filter: blur(96px) saturate(124%);
+  transform: translate3d(4%, 3%, 0) scale(1.08);
+}
+.app-shell.glass-chrome::before { opacity: .88; }
+.app-shell.glass-chrome::after { opacity: .7; }
+.app-shell.wave-motion::before { animation: limux-wave-primary 24s ease-in-out infinite alternate; }
+.app-shell.wave-motion::after { animation: limux-wave-secondary 30s ease-in-out infinite alternate; }
 .sidebar, .workspace { position: relative; z-index: 1; }
 .sidebar {
   display: flex;
@@ -96,9 +113,9 @@ button.danger { color: var(--danger); }
 }
 .glass-chrome .sidebar {
   border-right-color: rgba(151, 177, 207, .18);
-  background: linear-gradient(160deg, rgba(19, 25, 33, .79), rgba(10, 14, 20, .68));
-  box-shadow: inset -1px 0 rgba(255, 255, 255, .025), 12px 0 40px rgba(0, 0, 0, .15);
-  backdrop-filter: blur(22px) saturate(128%);
+  background: linear-gradient(160deg, rgba(18, 24, 32, .52), rgba(8, 12, 18, .35));
+  box-shadow: inset -1px 0 rgba(255, 255, 255, .04), 12px 0 42px rgba(0, 0, 0, .18);
+  backdrop-filter: blur(28px) saturate(152%);
 }
 .brand-row { display: flex; align-items: center; justify-content: space-between; min-height: 45px; padding: 2px 3px 5px 6px; }
 .brand { display: flex; flex-direction: column; min-width: 0; }
@@ -135,13 +152,20 @@ button.danger { color: var(--danger); }
 .notifications button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .notifications button small { color: var(--accent); font-size: 10px; }
 
-.workspace { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.workspace {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px rgba(151, 177, 207, .08);
+}
 .workspace-toolbar { display: flex; align-items: center; min-height: 39px; border-bottom: 1px solid var(--border); background: var(--chrome); }
 .glass-chrome .workspace-toolbar {
   border-bottom-color: rgba(151, 177, 207, .16);
-  background: linear-gradient(90deg, rgba(17, 23, 31, .76), rgba(11, 15, 21, .67));
-  box-shadow: inset 0 -1px rgba(255, 255, 255, .018), 0 10px 32px rgba(0, 0, 0, .12);
-  backdrop-filter: blur(20px) saturate(126%);
+  background: linear-gradient(90deg, rgba(17, 23, 31, .5), rgba(8, 12, 18, .31));
+  box-shadow: inset 0 -1px rgba(255, 255, 255, .035), 0 10px 34px rgba(0, 0, 0, .14);
+  backdrop-filter: blur(26px) saturate(150%);
 }
 .screen-tabs { display: flex; align-self: stretch; flex: 1; min-width: 0; overflow-x: auto; }
 .screen-tabs button { position: relative; min-width: 48px; padding: 0 13px; border-radius: 0; color: #929ca7; white-space: nowrap; }
@@ -150,15 +174,10 @@ button.danger { color: var(--danger); }
 .screen-tabs button.active::after { position: absolute; right: 10px; bottom: 0; left: 10px; height: 2px; border-radius: 2px 2px 0 0; background: var(--accent); content: ""; }
 .pane-actions { display: flex; align-items: center; gap: 1px; padding: 0 5px; border-left: 1px solid var(--border-soft); }
 .pane-actions .icon-button { width: 29px; height: 29px; flex-basis: 29px; }
-.pane-grid { display: grid; flex: 1; gap: 1px; padding: 1px; min-height: 0; background: var(--border); }
+.pane-grid { display: grid; flex: 1; gap: 1px; padding: 1px; min-height: 0; background: #242a31; }
 .pane { position: relative; display: flex; flex-direction: column; overflow: hidden; border: 0; background: var(--surface); min-width: 0; min-height: 0; }
 .pane.active { box-shadow: inset 0 0 0 1px rgba(38, 148, 255, .65); }
 .pane > header { display: flex; align-items: center; min-height: 32px; border-bottom: 1px solid var(--border-soft); background: #0c0f13; }
-.glass-chrome .pane > header {
-  border-bottom-color: rgba(151, 177, 207, .13);
-  background: linear-gradient(90deg, rgba(14, 19, 25, .88), rgba(8, 12, 17, .82));
-  backdrop-filter: blur(15px) saturate(120%);
-}
 .tab-list { display: flex; flex: 1; align-self: stretch; min-width: 0; overflow-x: auto; }
 .tab-item { position: relative; display: flex; flex: 0 1 260px; min-width: 70px; max-width: 260px; color: #929ca7; }
 .tab-item:hover { color: #dfe5eb; background: var(--hover); }
@@ -200,10 +219,15 @@ button.danger { color: var(--danger); }
 .state-screen div { display: flex; gap: 8px; justify-content: center; }
 .spinner { width: 32px; height: 32px; margin: auto; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes limux-wave {
+@keyframes limux-wave-primary {
   0% { transform: translate3d(-5%, -3%, 0) scale(1.03) rotate(-2deg); }
-  50% { transform: translate3d(4%, 2%, 0) scale(1.09) rotate(1deg); }
-  100% { transform: translate3d(-1%, 5%, 0) scale(1.05) rotate(3deg); }
+  48% { transform: translate3d(4%, 1%, 0) scale(1.1) rotate(1deg); }
+  100% { transform: translate3d(-1%, 6%, 0) scale(1.06) rotate(3deg); }
+}
+@keyframes limux-wave-secondary {
+  0% { transform: translate3d(5%, 4%, 0) scale(1.08) rotate(2deg); }
+  52% { transform: translate3d(-4%, -1%, 0) scale(1.03) rotate(-2deg); }
+  100% { transform: translate3d(2%, -6%, 0) scale(1.11) rotate(1deg); }
 }
 
 .modal-backdrop { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 30px; background: rgba(0, 3, 8, .69); backdrop-filter: blur(7px); }
@@ -214,9 +238,8 @@ button.danger { color: var(--danger); }
   padding: 20px;
   border: 1px solid rgba(151, 177, 207, .22);
   border-radius: 14px;
-  background: linear-gradient(145deg, rgba(20, 27, 36, .94), rgba(11, 16, 23, .91));
+  background: linear-gradient(145deg, rgba(20, 27, 36, .985), rgba(10, 14, 20, .98));
   box-shadow: 0 26px 90px rgba(0, 0, 0, .72), inset 0 1px rgba(255, 255, 255, .045);
-  backdrop-filter: blur(28px) saturate(132%);
 }
 .modal > header, .hook-provider { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }
 .modal h2 { margin: 0; }
@@ -255,5 +278,6 @@ button.danger { color: var(--danger); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell.wave-motion::before { animation: none; }
+  .app-shell.wave-motion::before,
+  .app-shell.wave-motion::after { animation: none; }
 }
