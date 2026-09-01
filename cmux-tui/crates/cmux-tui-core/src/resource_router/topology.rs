@@ -269,6 +269,12 @@ fn create_workspace(
     if initial_content != "empty" {
         return dispatch_exact_topology_mutation(mux, ResourceOperation::WorkspaceCreate, request);
     }
+    if request.fields.contains_key("cwd") {
+        return Err(validation_error(
+            "workspace-only creation does not accept cwd",
+            json!({"field":"cwd","initial_content":"empty"}),
+        ));
+    }
     let mutation = mutation(&request.envelope)?;
     let correlation_key =
         request.fields.get("correlation_key").and_then(Value::as_str).unwrap_or(&mutation.id);

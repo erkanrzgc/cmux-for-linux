@@ -1907,9 +1907,12 @@ def _operation_catalog(
         if (
             not isinstance(create_fields, dict)
             or set(create_fields)
-            != {"name", "initial_content", "correlation_key", "expected_revision"}
+            != {"name", "cwd", "initial_content", "correlation_key", "expected_revision"}
             or create_fields.get("name", {}).get("required") is not False
             or create_fields.get("name", {}).get("type")
+            != {"kind": "primitive", "name": "string"}
+            or create_fields.get("cwd", {}).get("required") is not False
+            or create_fields.get("cwd", {}).get("type")
             != {"kind": "primitive", "name": "string"}
             or create_fields.get("initial_content", {}).get("required") is not True
             or create_fields.get("initial_content", {}).get("type") != expected_initial_content
@@ -1923,7 +1926,7 @@ def _operation_catalog(
                 diagnostics,
                 path,
                 text,
-                "workspace.create params must be optional name, correlation_key, and expected_revision plus required initial_content",
+                "workspace.create params must be optional name, cwd, correlation_key, and expected_revision plus required initial_content",
                 "workspace.create",
             )
 

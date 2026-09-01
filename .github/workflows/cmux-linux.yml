@@ -1,0 +1,176 @@
+name: cmux-linux
+
+on:
+  pull_request:
+    paths:
+      - "cmux-tui/apps/linux/cmux-linux/**"
+      - "cmux-tui/bindings/typescript/**"
+      - "cmux-tui/frontends/web/**"
+      - ".github/workflows/cmux-linux.yml"
+  push:
+    branches: [main]
+    tags: ["cmux-linux-v*.*.*"]
+    paths:
+      - "cmux-tui/apps/linux/cmux-linux/**"
+      - "cmux-tui/bindings/typescript/**"
+      - "cmux-tui/frontends/web/**"
+      - ".github/workflows/cmux-linux.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cmux-linux-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  build:
+    name: Debian 12 build and test
+    runs-on: ubuntu-24.04
+    container: debian:12
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      APP_DIR: cmux-tui/apps/linux/cmux-linux
+      CMUX_TUI_BUILD_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      # Release artifacts must run on baseline x86-64 CPUs, not only the
+      # GitHub runner CPU that compiled Ghostty's Zig terminal library.
+      CMUX_GHOSTTY_VT_ZIG_CPU: baseline
+    steps:
+      - name: Install Debian 12 build prerequisites
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            binutils build-essential ca-certificates clang curl file git libayatana-appindicator3-dev \
+            dbus-x11 libgtk-3-dev librsvg2-dev libssl-dev libwebkit2gtk-4.1-dev \
+            libclang-dev pkg-config valgrind wget xauth xvfb xz-utils
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "22.14.0"
+          cache: npm
+          cache-dependency-path: |
+            cmux-tui/bindings/typescript/package-lock.json
+            cmux-tui/frontends/web/package-lock.json
+            cmux-tui/apps/linux/cmux-linux/package-lock.json
+
+      - name: Install repository-pinned Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - uses: ./.github/actions/setup-cmux-tui-rust
+
+      - name: Install repository-pinned Zig
+        run: ./scripts/install-zig-ci.sh
+
+      - name: Build and test TypeScript SDK
+        working-directory: cmux-tui/bindings/typescript
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
+
+      - name: Build and test reference web frontend
+        working-directory: cmux-tui/frontends/web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          npm test
+
+      - name: Build and test cmux-linux frontend
+        working-directory: cmux-tui/apps/linux/cmux-linux
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          npm test
+
+      - name: Build matching cmux sidecars
+        working-directory: cmux-tui/apps/linux/cmux-linux
+        run: ./scripts/prepare-sidecars.sh
+
+      - name: Smoke test sidecar CPU portability
+        working-directory: cmux-tui/apps/linux/cmux-linux
+        run: ./scripts/smoke-sidecar-portability.sh
+
+      - name: Check Tauri bridge formatting
+        working-directory: cmux-tui/apps/linux/cmux-linux/src-tauri
+        run: cargo fmt --all -- --check
+
+      - name: Test Tauri bridge
+        working-directory: cmux-tui/apps/linux/cmux-linux/src-tauri
+        run: cargo test --locked
+
+      - name: Build Debian and AppImage bundles
+        working-directory: cmux-tui/apps/linux/cmux-linux
+        run: npm run tauri build -- --bundles deb,appimage
+
+      - name: Smoke test packages and GUI startup
+        working-directory: cmux-tui/apps/linux/cmux-linux
+        run: ./scripts/smoke-packages.sh
+
+      - name: Normalize release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./$APP_DIR/package.json').version")
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "cmux-linux-v$version" ]]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package version $version" >&2
+            exit 1
+          fi
+          mkdir -p release-assets
+          deb=$(find "$APP_DIR/src-tauri/target/release/bundle/deb" -maxdepth 1 -name '*.deb' -print -quit)
+          appimage=$(find "$APP_DIR/src-tauri/target/release/bundle/appimage" -maxdepth 1 -name '*.AppImage' -print -quit)
+          test -n "$deb" && test -n "$appimage"
+          cp "$deb" "release-assets/cmux-linux-v${version}-x86_64.deb"
+          cp "$appimage" "release-assets/cmux-linux-v${version}-x86_64.AppImage"
+          chmod 0755 "release-assets/cmux-linux-v${version}-x86_64.AppImage"
+          cd release-assets
+          sha256sum cmux-linux-* > SHA256SUMS
+
+      - name: Attest Linux release assets
+        if: github.ref_type == 'tag'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: |
+            release-assets/cmux-linux-*.deb
+            release-assets/cmux-linux-*.AppImage
+            release-assets/SHA256SUMS
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cmux-linux-${{ github.sha }}
+          path: release-assets/*
+          if-no-files-found: error
+
+  release:
+    name: Publish manual-update release
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'cmux-linux-v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download attested assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: cmux-linux-${{ github.sha }}
+          path: release-assets
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --generate-notes \
+            --title "cmux-linux ${GITHUB_REF_NAME#cmux-linux-v}"

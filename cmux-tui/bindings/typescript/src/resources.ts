@@ -315,6 +315,19 @@ function requiredUnsignedInteger(
   return value;
 }
 
+function requiredSafeUnsignedInteger(
+  payload: Record<string, unknown>,
+  key: string,
+): number {
+  const value = payload[key];
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new CmuxProtocolError(
+      `resource result omitted required safe unsigned integer ${key}`,
+    );
+  }
+  return value;
+}
+
 function requiredPositiveUint16(
   payload: Record<string, unknown>,
   key: string,
@@ -1516,7 +1529,8 @@ function renderSnapshot(value: unknown): RenderSnapshot {
   strictObject(
     payload,
     [
-      "size", "cursor", "default_fg", "default_bg", "scrollback_rows", "rows",
+      "size", "cursor", "default_fg", "default_bg", "scrollback_rows",
+      "history_epoch", "graphics", "rows",
     ],
     "render snapshot",
   );
@@ -1531,6 +1545,18 @@ function renderSnapshot(value: unknown): RenderSnapshot {
     defaultFg: color(payload, "default_fg"),
     defaultBg: color(payload, "default_bg"),
     scrollbackRows: requiredUnsignedInteger(payload, "scrollback_rows"),
+    ...optionalProperty(
+      "historyEpoch",
+      Object.hasOwn(payload, "history_epoch")
+        ? requiredSafeUnsignedInteger(payload, "history_epoch")
+        : undefined,
+    ),
+    ...optionalProperty(
+      "graphics",
+      Object.hasOwn(payload, "graphics")
+        ? document(payload.graphics, "render snapshot graphics")
+        : undefined,
+    ),
     rows,
   });
 }
@@ -1541,7 +1567,7 @@ function renderPatch(value: unknown): RenderPatch {
     payload,
     [
       "cursor", "full_reset", "size", "default_fg", "default_bg",
-      "scrollback_rows", "rows",
+      "scrollback_rows", "history_epoch", "graphics", "rows",
     ],
     "render patch",
   );
@@ -1576,6 +1602,18 @@ function renderPatch(value: unknown): RenderPatch {
       "scrollbackRows",
       Object.hasOwn(payload, "scrollback_rows")
         ? requiredUnsignedInteger(payload, "scrollback_rows")
+        : undefined,
+    ),
+    ...optionalProperty(
+      "historyEpoch",
+      Object.hasOwn(payload, "history_epoch")
+        ? requiredSafeUnsignedInteger(payload, "history_epoch")
+        : undefined,
+    ),
+    ...optionalProperty(
+      "graphics",
+      Object.hasOwn(payload, "graphics")
+        ? document(payload.graphics, "render patch graphics")
         : undefined,
     ),
     rows,
@@ -2927,6 +2965,7 @@ export class Session extends Handle<SessionId, SessionSnapshot> {
       ...this.nestedScope(),
       initial_content: create.initialContent ?? "terminal",
       ...(create.name !== undefined ? { name: create.name } : {}),
+      ...(create.cwd !== undefined ? { cwd: create.cwd } : {}),
     };
     return this.client[createdOperation](operations.workspaceCreate, params, options);
   }

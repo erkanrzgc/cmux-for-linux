@@ -14069,6 +14069,59 @@ mod tests {
     }
 
     #[test]
+    fn workspace_create_accepts_cwd_and_launches_the_terminal_there() {
+        let cwd = TestSocketDir::create("workspace-create-cwd");
+        let mux = test_mux();
+        let (writer, outbound) = captured_writer();
+        let client = mux.control_clients.register(ClientTransport::Unix, writer.clone());
+        let scheduler =
+            Arc::new(ConnectionSurfaceScheduler::new(mux.surface_operation_admission.clone()));
+        let create = resource_request(
+            "create-with-cwd",
+            "workspace.create",
+            json!({
+                "machine":"current",
+                "session":"current",
+                "initial_content":"terminal",
+                "cwd":cwd.path(),
+            }),
+            Some("create-with-cwd"),
+        );
+
+        assert!(handle_connection_message(&mux, client, &create, &writer, &scheduler));
+        let created = pop_json(&outbound);
+        assert_eq!(created["ok"], true, "{created}");
+        let terminal_id =
+            TerminalPublicId::parse(created["result"]["value"]["terminal_id"].as_str().unwrap())
+                .unwrap();
+        let surface = mux
+            .resource_surface_for_terminal(&terminal_id)
+            .and_then(|surface| mux.surface(surface))
+            .expect("created terminal surface");
+        assert_eq!(surface.spawn_cwd().as_deref(), cwd.path().to_str());
+
+        let create_empty = resource_request(
+            "create-empty-with-cwd",
+            "workspace.create",
+            json!({
+                "machine":"current",
+                "session":"current",
+                "initial_content":"empty",
+                "cwd":cwd.path(),
+            }),
+            Some("create-empty-with-cwd"),
+        );
+        assert!(handle_connection_message(&mux, client, &create_empty, &writer, &scheduler));
+        let rejected = pop_json(&outbound);
+        assert_eq!(rejected["ok"], false, "{rejected}");
+        assert_eq!(rejected["error"]["code"], "validation.invalid", "{rejected}");
+        assert_eq!(rejected["error"]["details"]["field"], "cwd", "{rejected}");
+
+        disconnect_client(&mux, client, false);
+        mux.shutdown();
+    }
+
+    #[test]
     fn terminal_waits_do_not_block_ping_or_stream_cancel_on_the_same_connection() {
         let mux = test_mux();
         let (writer, outbound) = captured_writer();

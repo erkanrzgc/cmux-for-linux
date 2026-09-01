@@ -16942,6 +16942,41 @@ mod tests {
     }
 
     #[test]
+    fn detached_terminal_event_matches_the_public_snapshot_contract() {
+        let mux = test_mux();
+        let original = mux.new_workspace(Some("detached terminal".into()), None).unwrap();
+        let terminal_id = original.terminal_public_id().cloned().unwrap();
+        let pane = mux.with_state(|state| state.pane_of(original.id).unwrap());
+        mux.new_tab(Some(pane), None, None).unwrap();
+        let before = mux.with_state(|state| state.resource_revision);
+
+        assert!(mux.close_surface(original.id).unwrap());
+
+        let batches = mux.resource_events_after(before).unwrap().batches;
+        assert_eq!(batches.len(), 1);
+        let changes = batches[0].changes.as_array().unwrap();
+        let terminal_delta = changes
+            .iter()
+            .find(|change| {
+                change["kind"] == "upsert"
+                    && change["resource"] == "terminal"
+                    && change["id"] == terminal_id.as_str()
+            })
+            .expect("detaching the last view must publish the catalog terminal");
+        let snapshot = crate::resource_api::public_session_snapshot(&mux).unwrap();
+        let terminal = snapshot["terminals"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|terminal| terminal["id"] == terminal_id.as_str())
+            .expect("detached terminal remains in the public catalog");
+
+        assert_eq!(&terminal_delta["value"], terminal);
+        assert_eq!(terminal_delta["value"]["lifecycle"], "running");
+        assert_eq!(terminal_delta["value"]["tab_ids"], serde_json::json!([]));
+    }
+
+    #[test]
     fn selector_names_preserve_empty_whitespace_and_unicode_and_report_duplicates() {
         let (mut restored, machine, session, _) = selector_fixture();
         let before = restored.state.resource_revision;

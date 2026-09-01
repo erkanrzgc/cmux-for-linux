@@ -11950,6 +11950,14 @@
             },
             "description": "When present, exact name bytes are preserved, including empty, whitespace, and Unicode."
           },
+          "cwd": {
+            "required": false,
+            "type": {
+              "kind": "primitive",
+              "name": "string"
+            },
+            "description": "Starting directory for the created terminal. Valid only when initial_content is terminal."
+          },
           "initial_content": {
             "required": true,
             "type": {
@@ -11981,7 +11989,8 @@
         },
         "extra": false,
         "constraints": [
-          "initial_content is explicit. terminal returns CreatedTerminalPath; empty returns CreatedWorkspaceOnly."
+          "initial_content is explicit. terminal returns CreatedTerminalPath; empty returns CreatedWorkspaceOnly.",
+          "cwd is valid only when initial_content is terminal."
         ]
       },
       "result": {
