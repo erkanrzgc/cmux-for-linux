@@ -484,7 +484,9 @@ through 1.0 to create the terminal as a separate scrolling viewport column;
 ordinary splits omit it. `screen.create` returns the complete created terminal
 path.
 
-`workspace.create` requires `initial_content: terminal|empty`.
+`workspace.create` requires `initial_content: terminal|empty`. Terminal creation
+may include `cwd` to start the first terminal in that directory; workspace-only
+creation rejects `cwd` instead of silently ignoring it.
 `workspace.run` and `pane.run` accept exactly one of a nonempty `argv`
 array or a `shell` script. Only `argv[0]` must be nonempty; later values,
 including empty strings, preserve exact bytes. The server runs `shell` with
